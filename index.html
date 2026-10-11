@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2e7d32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Flower Order</title>
+<style>
+  :root{
+    --green:#2e7d32; --green-d:#1b5e20; --ink:#222; --muted:#6b7280;
+    --bg:#f3f6f1; --card:#fff; --line:#e3e8e0;
+    --item:48px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{display:flex;justify-content:center}
+  .app{width:100%;max-width:480px;min-height:100vh;padding:0 12px calc(24px + env(safe-area-inset-bottom))}
+  header{padding:calc(14px + env(safe-area-inset-top)) 4px 8px;text-align:center}
+  header h1{margin:0;font-size:22px;color:var(--green-d)}
+  .saved{font-size:12px;color:var(--muted);margin-top:2px}
+
+  .card{background:var(--card);border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  label.lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  input[type=date]{width:100%;font-size:17px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);min-height:48px}
+  .sessions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .sess{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 4px;font-size:14px;font-weight:600;color:var(--ink);min-height:52px;line-height:1.2}
+  .sess .e{display:block;font-size:20px}
+  .sess.on{background:var(--green);border-color:var(--green);color:#fff}
+
+  /* table: left to right = Flowers, Quantity, Price, Total */
+  .grid{display:grid;grid-template-columns:1fr 76px 1fr 1.15fr;gap:6px;align-items:center}
+  .thead{font-size:12px;font-weight:800;color:var(--green-d);text-transform:uppercase;text-align:center;padding:0 2px 6px}
+  .row{border-radius:12px;padding:6px;margin-bottom:6px}
+  .c-flower{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+  .c-flower .nm{font-weight:800;font-size:15px;word-break:break-word;line-height:1.1}
+  .rm{border:0;background:rgba(255,255,255,.75);border-radius:8px;font-size:12px;font-weight:700;color:#b71c1c;padding:5px 8px;min-height:28px}
+  .rm:active{background:#fff}
+
+  .pwrap{position:relative;height:var(--item);border-radius:10px;background:rgba(255,255,255,.85);overflow:hidden}
+  .picker{height:var(--item);overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;
+    scrollbar-width:none;-ms-overflow-style:none;touch-action:pan-y}
+  .picker::-webkit-scrollbar{display:none}
+  .picker div{height:var(--item);scroll-snap-align:center;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+  .pwrap::before,.pwrap::after{position:absolute;left:0;right:0;text-align:center;font-size:8px;line-height:1;color:#666;pointer-events:none;opacity:.7}
+  .pwrap::before{content:"\25B2";top:3px}
+  .pwrap::after{content:"\25BC";bottom:3px}
+
+  .price{width:100%;height:var(--item);font-size:17px;font-weight:700;text-align:center;border:0;border-radius:10px;background:rgba(255,255,255,.9);color:var(--ink);padding:0 4px;min-width:0}
+  .price:focus{outline:2px solid var(--green)}
+  .c-total{font-weight:800;font-size:14px;text-align:center;word-break:break-all}
+
+  .totalbar{margin-top:10px;background:var(--green-d);color:#fff;border-radius:12px;padding:12px 6px}
+  .totalbar .lab{grid-column:1 / 4;text-align:left;font-weight:800;letter-spacing:.05em;font-size:14px;padding-left:6px}
+  .totalbar .val{font-weight:900;font-size:16px;text-align:center;word-break:break-all}
+  .empty{text-align:center;color:var(--muted);padding:18px 6px;font-size:14px}
+
+  .btn{border:0;border-radius:14px;font-size:17px;font-weight:800;min-height:54px;padding:0 16px;width:100%}
+  .btn.main{background:var(--green);color:#fff}
+  .btn.main:active{background:var(--green-d)}
+  .btn.alt{background:#fff;color:var(--green-d);border:2px solid var(--green)}
+  .btn.ghost{background:#eceff1;color:#37474f}
+  .actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:12px}
+
+  /* add sheet */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .overlay.show{display:flex}
+  .sheet{background:#fff;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto}
+  .sheet h2{margin:0 0 4px;font-size:19px}
+  .sheet h3{margin:16px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:15px;font-weight:800;color:var(--ink);min-height:44px}
+  .hint{font-size:13px;color:var(--muted)}
+  .newrow{display:grid;grid-template-columns:1fr 56px;gap:8px}
+  .newrow input[type=text]{font-size:17px;padding:12px;border:1.5px solid var(--line);border-radius:12px;min-height:48px;min-width:0}
+  .newrow input[type=color]{width:56px;height:48px;border:1.5px solid var(--line);border-radius:12px;padding:3px;background:#fff}
+
+  .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(30px);
+    background:#263238;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;
+    transition:.25s;z-index:50;max-width:90%;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* receipt */
+  #view-receipt{display:none}
+  .rimg{width:100%;border-radius:12px;display:block;box-shadow:0 1px 6px rgba(0,0,0,.15);background:#fff}
+  .dl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .note{font-size:12px;color:var(--muted);text-align:center;margin:0 0 12px}
+  .stack{display:grid;gap:10px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ORDER PAGE -->
+  <div id="view-order">
+    <header>
+      <h1>🌸 Flower Order</h1>
+      <div class="saved">✓ Saved automatically on this phone</div>
+    </header>
+
+    <div class="card">
+      <label class="lbl" for="date">Date</label>
+      <input type="date" id="date">
+      <div class="sessions" id="sessions">
+        <button class="sess" data-s="Morning" type="button"><span class="e">🌅</span>Morning</button>
+        <button class="sess" data-s="Noon" type="button"><span class="e">☀️</span>Noon</button>
+        <button class="sess" data-s="Afternoon" type="button"><span class="e">🌇</span>Afternoon</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="grid thead">
+        <div>Flowers</div><div>Quantity</div><div>Price</div><div>Total</div>
+      </div>
+      <div id="rows"></div>
+      <div class="grid totalbar">
+        <div class="lab">GRAND TOTAL</div>
+        <div class="val" id="grand">₱0.00</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn alt" id="btnAdd" type="button">＋ Add</button>
+      <button class="btn main" id="btnSubmit" type="button">Submit</button>
+    </div>
+  </div>
+
+  <!-- RECEIPT PAGE -->
+  <div id="view-receipt">
+    <header>
+      <h1>🧾 Receipt</h1>
+      <div class="saved">Download your receipt as an image</div>
+    </header>
+    <img id="rimg" class="rimg" alt="Receipt">
+    <div class="dl">
+      <button class="btn main" id="dlPng" type="button">⬇ PNG</button>
+      <button class="btn main" id="dlJpg" type="button">⬇ JPG</button>
+    </div>
+    <button class="btn alt" id="btnShare" type="button" style="margin-bottom:10px">📤 Share / Save to Files or Photos</button>
+    <p class="note">If nothing downloads, tap “Share / Save”, or press and hold the receipt and choose “Save image”. Tip: open this page in Chrome or Safari, not inside another app’s preview.</p>
+    <div class="stack">
+      <button class="btn alt" id="btnBack" type="button">← Edit order</button>
+      <button class="btn ghost" id="btnNew" type="button">Start new order</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SHEET -->
+<div class="overlay" id="overlay">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h2>Add flower</h2>
+    <h3>Removed flowers — tap to add back</h3>
+    <div class="chips" id="removedChips"></div>
+    <h3>Add another</h3>
+    <div class="newrow">
+      <input type="text" id="newName" placeholder="New flower name" maxlength="24" autocomplete="off">
+      <input type="color" id="newColor" value="#43a047" aria-label="Flower color">
+    </div>
+    <p class="hint">Pick the flower's color — the row will use it.</p>
+    <div class="stack" style="margin-top:8px">
+      <button class="btn main" id="btnNewAdd" type="button">Add flower</button>
+      <button class="btn ghost" id="btnClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  var KEY = 'flowerOrder.v1';
+  var ITEM = 48;        // must match --item
+  var MAXQ = 300;       // quantity scroll range 0..MAXQ
+  var DEFAULTS = [
+    ['Rad','#e53935'], ['Wonder','#ff9800'], ['Rosal','#ff8a80'], ['Golden','#fbc02d'],
+    ['Rose','#ec407a'], ['Aster','#9575cd'], ['Winter','#b3e5fc']
+  ];
+
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function fresh(){
+    return {
+      flowers: DEFAULTS.map(function(a){ return {id:uid(),name:a[0],color:a[1],qty:0,price:''}; }),
+      removed: [], date: todayStr(), session: ''
+    };
+  }
+  function load(){
+    try{
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if(s && Array.isArray(s.flowers) && Array.isArray(s.removed)) return s;
+    }catch(e){}
+    return fresh();
+  }
+  var state = load();
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function num(v){ var n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function money(n, fixed){
+    return '₱' + n.toLocaleString('en-US', {minimumFractionDigits: fixed?2:0, maximumFractionDigits: 2});
+  }
+  function mix(hex, t){
+    var h = hex.replace('#',''); if(h.length===3) h=h.split('').map(function(c){return c+c;}).join('');
+    var r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
+    r=Math.round(r+(255-r)*t); g=Math.round(g+(255-g)*t); b=Math.round(b+(255-b)*t);
+    return 'rgb('+r+','+g+','+b+')';
+  }
+  function $(id){ return document.getElementById(id); }
+
+  var toastTimer;
+  function toast(msg){
+    var t=$('toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.classList.remove('show'); },2400);
+  }
+
+  /* ---------- render order rows ---------- */
+  var rowsEl = $('rows');
+
+  function render(){
+    if(!state.flowers.length){
+      rowsEl.innerHTML = '<div class="empty">No flowers in the list.<br>Tap <b>＋ Add</b> to add one.</div>';
+      updateTotals(); return;
+    }
+    var html = '';
+    state.flowers.forEach(function(f){
+      var items = '';
+      for(var i=0;i<=MAXQ;i++) items += '<div>'+i+'</div>';
+      html += '<div class="grid row" data-id="'+f.id+'" style="background:'+mix(f.color,0.5)+';border:2px solid '+mix(f.color,0.1)+'">'
+        + '<div class="c-flower"><span class="nm">'+esc(f.name)+'</span>'
+        + '<button class="rm" type="button" data-rm="'+f.id+'">✕ Remove</button></div>'
+        + '<div class="pwrap"><div class="picker" data-q="'+f.id+'">'+items+'</div></div>'
+        + '<input class="price" type="number" inputmode="decimal" min="0" step="any" placeholder="₱ price" data-p="'+f.id+'" value="'+esc(f.price)+'">'
+        + '<div class="c-total" data-t="'+f.id+'">₱0</div>'
+        + '</div>';
+    });
+    rowsEl.innerHTML = html;
+    // restore scroll positions of the quantity pickers
+    var pickers = rowsEl.querySelectorAll('.picker');
+    for(var i=0;i<pickers.length;i++){
+      var f = byId(pickers[i].getAttribute('data-q'));
+      if(f) pickers[i].scrollTop = f.qty * ITEM;
+    }
+    updateTotals();
+  }
+
+  function byId(id){
+    for(var i=0;i<state.flowers.length;i++) if(state.flowers[i].id===id) return state.flowers[i];
+    return null;
+  }
+
+  function updateTotals(){
+    var grand = 0;
+    state.flowers.forEach(function(f){
+      var t = f.qty * num(f.price);
+      grand += t;
+      var el = rowsEl.querySelector('[data-t="'+f.id+'"]');
+      if(el) el.textContent = money(t,false);
+    });
+    $('grand').textContent = money(grand,true);
+    return grand;
+  }
+
+  /* quantity scroll (scroll doesn't bubble -> capture) */
+  var raf = {};
+  rowsEl.addEventListener('scroll', function(e){
+    var el = e.target;
+    if(!el.classList || !el.classList.contains('picker')) return;
+    var id = el.getAttribute('data-q');
+    if(raf[id]) return;
+    raf[id] = requestAnimationFrame(function(){
+      raf[id] = 0;
+      var f = byId(id); if(!f) return;
+      var q = Math.max(0, Math.min(MAXQ, Math.round(el.scrollTop / ITEM)));
+      if(q !== f.qty){ f.qty = q; save(); updateTotals(); }
+    });
+  }, true);
+
+  rowsEl.addEventListener('input', function(e){
+    var id = e.target.getAttribute && e.target.getAttribute('data-p');
+    if(!id) return;
+    var f = byId(id); if(!f) return;
+    f.price = e.target.value; save(); updateTotals();
+  });
+
+  rowsEl.addEventListener('click', function(e){
+    var id = e.target.getAttribute && e.target.getAttribute('data-rm');
+    if(!id) return;
+    var idx = -1;
+    state.flowers.forEach(function(f,i){ if(f.id===id) idx=i; });
+    if(idx<0) return;
+    var f = state.flowers.splice(idx,1)[0];
+    state.removed.push({id:f.id, name:f.name, color:f.color, price:f.price});
+    save(); render();
+    toast(f.name + ' removed — tap Add to bring it back');
+  });
+
+  /* ---------- date & session ---------- */
+  var dateEl = $('date');
+  dateEl.value = state.date || todayStr();
+  dateEl.addEventListener('change', function(){ state.date = dateEl.value; save(); });
+
+  var sessBtns = document.querySelectorAll('.sess');
+  function paintSessions(){
+    for(var i=0;i<sessBtns.length;i++){
+      sessBtns[i].classList.toggle('on', sessBtns[i].getAttribute('data-s')===state.session);
+    }
+  }
+  for(var i=0;i<sessBtns.length;i++){
+    sessBtns[i].addEventListener('click', function(){
+      state.session = this.getAttribute('data-s'); save(); paintSessions();
+    });
+  }
+
+  /* ---------- add sheet ---------- */
+  var overlay = $('overlay');
+  function paintRemoved(){
+    var box = $('removedChips');
+    if(!state.removed.length){
+      box.innerHTML = '<span class="hint">Nothing removed yet. Flowers you remove will appear here.</span>'; return;
+    }
+    box.innerHTML = state.removed.map(function(r){
+      return '<button class="chip" type="button" data-back="'+r.id+'" style="background:'+mix(r.color,0.4)+';border-color:'+r.color+'">＋ '+esc(r.name)+'</button>';
+    }).join('');
+  }
+  function openSheet(){ paintRemoved(); overlay.classList.add('show'); }
+  function closeSheet(){ overlay.classList.remove('show'); }
+
+  $('btnAdd').addEventListener('click', openSheet);
+  $('btnClose').addEventListener('click', closeSheet);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) closeSheet(); });
+
+  $('removedChips').addEventListener('click', function(e){
+    var id = e.target.getAttribute && e.target.getAttribute('data-back');
+    if(!id) return;
+    var idx=-1; state.removed.forEach(function(r,i){ if(r.id===id) idx=i; });
+    if(idx<0) return;
+    var r = state.removed.splice(idx,1)[0];
+    state.flowers.push({id:r.id, name:r.name, color:r.color, qty:0, price:r.price||''});
+    save(); render(); paintRemoved();
+    toast(r.name + ' added back');
+  });
+
+  $('btnNewAdd').addEventListener('click', function(){
+    var name = $('newName').value.trim();
+    if(!name){ toast('Type the flower name first'); return; }
+    var low = name.toLowerCase();
+    var i;
+    for(i=0;i<state.flowers.length;i++){
+      if(state.flowers[i].name.toLowerCase()===low){ toast(name+' is already in the list'); return; }
+    }
+    // same name as a removed one -> bring that one back
+    for(i=0;i<state.removed.length;i++){
+      if(state.removed[i].name.toLowerCase()===low){
+        var r = state.removed.splice(i,1)[0];
+        state.flowers.push({id:r.id,name:r.name,color:r.color,qty:0,price:r.price||''});
+        save(); render(); paintRemoved(); $('newName').value='';
+        toast(r.name+' added back'); return;
+      }
+    }
+    state.flowers.push({id:uid(), name:name, color:$('newColor').value, qty:0, price:''});
+    save(); render(); $('newName').value='';
+    toast(name+' added');
+    closeSheet();
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+
+  /* ---------- submit -> receipt ---------- */
+  var lastCanvas = null, lastStamp = '';
+
+  $('btnSubmit').addEventListener('click', function(){
+    if(!state.date){ toast('Choose a date first'); return; }
+    if(!state.session){ toast('Choose Morning, Noon or Afternoon'); return; }
+    var items = state.flowers.filter(function(f){ return f.qty>0; });
+    if(!items.length){ toast('Set a quantity for at least one flower'); return; }
+    for(var i=0;i<items.length;i++){
+      if(num(items[i].price)<=0){ toast('Enter the price for '+items[i].name); return; }
+    }
+    buildReceipt(items);
+    $('view-order').style.display='none';
+    $('view-receipt').style.display='block';
+    window.scrollTo(0,0);
+  });
+
+  function parseDate(s){
+    var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]);
+  }
+
+  function buildReceipt(items){
+    var W=720, P=44, rowH=60, headH=270, footH=190;
+    var H = headH + items.length*rowH + footH;
+    var c = document.createElement('canvas'); c.width=W; c.height=H;
+    var g = c.getContext('2d');
+    var F = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    var now = new Date();
+    var dObj = parseDate(state.date);
+    var dateTxt = dObj.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    var no = 'FO-' + state.date.replace(/-/g,'') + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    lastStamp = no;
+
+    g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+    g.textBaseline='middle';
+
+    g.fillStyle='#1b5e20'; g.textAlign='center'; g.font='800 42px '+F;
+    g.fillText('🌸 Flower Order', W/2, 64);
+    g.fillStyle='#6b7280'; g.font='600 24px '+F;
+    g.fillText('RECEIPT', W/2, 106);
+
+    g.textAlign='left'; g.fillStyle='#222'; g.font='600 26px '+F;
+    g.fillText('Date: '+dateTxt, P, 158);
+    g.fillText('Time: '+state.session, P, 196);
+    g.fillStyle='#6b7280'; g.font='500 22px '+F;
+    g.fillText('No. '+no, P, 232);
+
+    // header row
+    var y = headH - 6;
+    function dash(yy){ g.save(); g.setLineDash([8,6]); g.strokeStyle='#9aa5a0'; g.lineWidth=2; g.beginPath(); g.moveTo(P,yy); g.lineTo(W-P,yy); g.stroke(); g.restore(); }
+    dash(headH-34);
+    g.fillStyle='#1b5e20'; g.font='800 21px '+F;
+    g.textAlign='left';  g.fillText('FLOWER', P+36, y);
+    g.textAlign='right'; g.fillText('QTY', 400, y); g.fillText('PRICE', 535, y); g.fillText('TOTAL', W-P, y);
+    dash(headH+14);
+
+    var grand = 0;
+    items.forEach(function(f,i){
+      var cy = headH + 14 + rowH*i + rowH/2 + 4;
+      var price = num(f.price), tot = f.qty*price; grand += tot;
+      // swatch
+      g.fillStyle=f.color; g.beginPath(); g.arc(P+12, cy, 12, 0, Math.PI*2); g.fill();
+      g.strokeStyle='rgba(0,0,0,.2)'; g.lineWidth=1.5; g.stroke();
+      // name (shrink to fit)
+      var nm = f.name; g.font='700 26px '+F; g.fillStyle='#222'; g.textAlign='left';
+      while(g.measureText(nm).width > 190 && nm.length>2){ nm = nm.slice(0,-2)+'…'; }
+      g.fillText(nm, P+36, cy);
+      g.font='600 24px '+F; g.textAlign='right';
+      g.fillText(String(f.qty), 400, cy);
+      g.fillText(money(price,false), 535, cy);
+      g.font='800 24px '+F;
+      g.fillText(money(tot,false), W-P, cy);
+    });
+
+    var ty = headH + 14 + rowH*items.length + 10;
+    dash(ty);
+    g.fillStyle='#1b5e20'; g.font='800 30px '+F; g.textAlign='left';
+    g.fillText('GRAND TOTAL', P, ty+50);
+    g.textAlign='right'; g.font='900 36px '+F;
+    g.fillText(money(grand,true), W-P, ty+50);
+
+    g.textAlign='center'; g.fillStyle='#6b7280'; g.font='500 22px '+F;
+    g.fillText('Thank you!', W/2, H-48);
+
+    lastCanvas = c;
+    $('rimg').src = c.toDataURL('image/png');
+  }
+
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  }
+  function makeBlob(type, cb){
+    var mime = type==='jpg' ? 'image/jpeg' : 'image/png';
+    lastCanvas.toBlob(function(b){ cb(b, mime); }, mime, 0.95);
+  }
+  function shareFile(type){
+    if(!lastCanvas) return;
+    makeBlob(type, function(b, mime){
+      if(!b){ toast('Could not create the image'); return; }
+      var name = 'receipt-' + lastStamp + '.' + type;
+      try{
+        var file = new File([b], name, {type: mime});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          navigator.share({files:[file], title:'Flower order receipt'}).catch(function(err){
+            if(err && err.name==='AbortError') return;
+            anchorDownload(b, name);
+          });
+          return;
+        }
+      }catch(e){}
+      anchorDownload(b, name);
+    });
+  }
+  function anchorDownload(b, name){
+    try{
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = name;
+      a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 10000);
+      toast('Saving ' + name + ' … check your Downloads. If missing, tap Share / Save.');
+    }catch(e){
+      toast('Press and hold the receipt, then choose Save image');
+    }
+  }
+  function download(type){
+    if(!lastCanvas) return;
+    if(isIOS()){ shareFile(type); return; }   // iPhone/iPad: use the share sheet -> Save Image / Save to Files
+    makeBlob(type, function(b){
+      if(!b){ toast('Could not create the image'); return; }
+      anchorDownload(b, 'receipt-' + lastStamp + '.' + type);
+    });
+  }
+  $('btnShare').addEventListener('click', function(){ shareFile('png'); });
+  $('dlPng').addEventListener('click', function(){ download('png'); });
+  $('dlJpg').addEventListener('click', function(){ download('jpg'); });
+
+  function showOrder(){
+    $('view-receipt').style.display='none';
+    $('view-order').style.display='block';
+    render(); window.scrollTo(0,0);
+  }
+  $('btnBack').addEventListener('click', showOrder);
+  $('btnNew').addEventListener('click', function(){
+    if(!confirm('Start a new order? Quantities will reset to 0 (prices are kept).')) return;
+    state.flowers.forEach(function(f){ f.qty = 0; });
+    state.session = ''; state.date = todayStr(); dateEl.value = state.date;
+    save(); paintSessions(); showOrder();
+  });
+
+  /* ---------- init ---------- */
+  paintSessions();
+  render();
+})();
+</script>
+</body>
+</html>
